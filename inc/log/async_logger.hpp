@@ -25,7 +25,7 @@ namespace clia {
 
         public:
             void log(const void *message, const std::size_t len) noexcept override; // 异步日志记录方法
-            void start(std::shared_ptr<clia::log::AppenderTrait> appender) noexcept;
+            void start() noexcept;
         private:
             void thread();
         private:

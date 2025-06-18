@@ -1,3 +1,4 @@
+#include <cassert>
 #include <chrono>
 #include <mutex>
 #include <cstring>
@@ -39,8 +40,8 @@ void clia::log::AsyncLogger::log(const void *message, const std::size_t len) noe
     }
 }
 
-void clia::log::AsyncLogger::start(std::shared_ptr<clia::log::AppenderTrait> appender) noexcept {
-    m_appender = appender;
+void clia::log::AsyncLogger::start() noexcept {
+    assert(m_appender.get() != nullptr);
     m_running = true;
     m_thread = std::thread(&AsyncLogger::thread, this);
 }

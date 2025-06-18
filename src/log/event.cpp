@@ -1,4 +1,3 @@
-#include <cstdio>
 #include <cstring>
 
 #include "log/event.hpp"
@@ -14,7 +13,7 @@ clia::log::Event::Event(std::shared_ptr<LoggerTrait> logger, const Level level, 
 {
     constexpr char SPACER = ' ';
     char timebuf[32] = {0};
-    clia::util::time::get_current_time_str(timebuf, sizeof(timebuf), "%Y%m%d%H%M%S");
+    clia::util::time::get_time_str(timebuf, sizeof(timebuf), std::time(nullptr), "%Y%m%d%H%M%S");
     const char *filename = std::strrchr(m_file, '/');
     if (!filename) {
         filename = m_file; // 如果没有找到斜杠，使用完整路径

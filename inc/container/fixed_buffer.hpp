@@ -27,9 +27,9 @@ namespace clia {
             inline void reset() noexcept;
             inline void append(const Tp& value) noexcept;
             inline void append(Tp&& value) noexcept;
-            inline void append_range(const Tp* values, const size_t len) noexcept;
+            inline void append_range(const Tp* values, const std::size_t len) noexcept;
             inline Tp* current() noexcept;
-            inline void add(const size_t len) noexcept;
+            inline void add(const std::size_t len) noexcept;
         private:
             inline const Tp* end() const noexcept;
         private:
@@ -101,14 +101,14 @@ inline void clia::container::FixedBuffer<Tp, Nm>::append(Tp&& value) noexcept {
 }
 
 template <typename Tp, int Nm>
-inline void clia::container::FixedBuffer<Tp, Nm>::append_range(const Tp* values, const size_t len) noexcept {
+inline void clia::container::FixedBuffer<Tp, Nm>::append_range(const Tp* values, const std::size_t len) noexcept {
     assert(len < avail());
     if (std::is_arithmetic<Tp>::value) {
         std::memcpy(current(), values, len * sizeof(Tp));
         add(len);
     } else {
         static_assert(std::is_trivially_copyable<Tp>::value, "Tp must be trivially copyable");
-        for (size_t i = 0; i < len; ++i) {
+        for (std::size_t i = 0; i < len; ++i) {
             append(values[i]);
         }
     }
@@ -120,7 +120,7 @@ inline Tp* clia::container::FixedBuffer<Tp, Nm>::current() noexcept {
 }
 
 template <typename Tp, int Nm>
-inline void clia::container::FixedBuffer<Tp, Nm>::add(const size_t len) noexcept { 
+inline void clia::container::FixedBuffer<Tp, Nm>::add(const std::size_t len) noexcept { 
     assert(avail() > len);
     m_current += len; 
 }

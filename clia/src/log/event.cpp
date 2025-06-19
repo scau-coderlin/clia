@@ -1,8 +1,8 @@
 #include <cstring>
 
-#include "log/event.hpp"
-#include "util/time.hpp"
-#include "util/process.hpp"
+#include "clia/log/event.hpp"
+#include "clia/util/time.hpp"
+#include "clia/util/process.hpp"
 
 clia::log::Event::Event(std::shared_ptr<LoggerTrait> logger, const Level level, const char *file, const int line, const char *func) noexcept
     : m_logger(logger)

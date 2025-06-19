@@ -7,7 +7,7 @@
 #include <string>
 #include <memory>
 
-#include "log/trait.hpp"
+#include "clia/log/trait.hpp"
 
 namespace clia {
     namespace log {

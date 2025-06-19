@@ -2,8 +2,8 @@
 #include <cstring>
 #include <cassert>
 
-#include "log/stream.hpp"
-#include "util/str.hpp"
+#include "clia/log/stream.hpp"
+#include "clia/util/str.hpp"
 
 clia::log::Stream::Stream() noexcept {
     ;

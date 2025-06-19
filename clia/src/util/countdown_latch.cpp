@@ -1,6 +1,7 @@
-#include "util/countdown_latch.hpp"
 #include <cassert>
 #include <mutex>
+
+#include "clia/util/countdown_latch.hpp"
 
 clia::util::CountDownLatch::CountDownLatch(int count) noexcept
     : m_count(count) 

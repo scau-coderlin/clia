@@ -4,10 +4,10 @@
 #include <thread>
 #include <vector>
 
-#include "log/event.hpp"
-#include "log/async_logger.hpp"
-#include "log/file_appender.hpp"
-#include "log/trait.hpp"
+#include "clia/log/event.hpp"
+#include "clia/log/async_logger.hpp"
+#include "clia/log/file_appender.hpp"
+#include "clia/log/trait.hpp"
 
 class TimeS {
 private:

@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <cstdarg>
 
-#include "container/fixed_buffer.hpp"
+#include "clia/container/fixed_buffer.hpp"
 
 namespace clia {
     namespace log {

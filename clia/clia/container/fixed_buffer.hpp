@@ -107,7 +107,6 @@ inline void clia::container::FixedBuffer<Tp, Nm>::append_range(const Tp* values,
         std::memcpy(current(), values, len * sizeof(Tp));
         add(len);
     } else {
-        static_assert(std::is_trivially_copyable<Tp>::value, "Tp must be trivially copyable");
         for (std::size_t i = 0; i < len; ++i) {
             append(values[i]);
         }

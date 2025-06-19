@@ -1,4 +1,4 @@
-#include "log/trait.hpp"
+#include "clia/log/trait.hpp"
 
 const char* clia::log::level_to_string(const Level level) noexcept {
     switch (level) {

@@ -8,8 +8,8 @@
 #include <thread>
 #include <condition_variable>
 
-#include "log/trait.hpp"
-#include "container/fixed_buffer.hpp"
+#include "clia/log/trait.hpp"
+#include "clia/container/fixed_buffer.hpp"
 
 namespace clia {
     namespace log {

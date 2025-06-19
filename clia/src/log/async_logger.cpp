@@ -4,8 +4,8 @@
 #include <cstring>
 #include <cstdio>
 
-#include "log/async_logger.hpp"
-#include "util/time.hpp"
+#include "clia/log/async_logger.hpp"
+#include "clia/util/time.hpp"
 
 clia::log::AsyncLogger::AsyncLogger(clia::log::Level level, int flush_interval_sec) noexcept
     : LoggerTrait(level)

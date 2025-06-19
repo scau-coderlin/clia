@@ -2,8 +2,8 @@
 
 #include <memory>
 
-#include "log/trait.hpp"
-#include "log/stream.hpp"
+#include "clia/log/trait.hpp"
+#include "clia/log/stream.hpp"
 
 namespace clia {
     namespace log {

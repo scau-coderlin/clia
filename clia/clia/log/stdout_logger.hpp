@@ -2,7 +2,7 @@
 
 #include <cstdio>
 
-#include "log/trait.hpp"
+#include "clia/log/trait.hpp"
 
 namespace clia {
     namespace log {

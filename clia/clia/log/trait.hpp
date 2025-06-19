@@ -1,5 +1,6 @@
 #pragma once
 
+#include "clia/base/nocopyable.hpp"
 #include <cstddef>
 #include <memory>
 
@@ -15,27 +16,19 @@ namespace clia {
         };
         extern const char* level_to_string(const Level level) noexcept;
         
-        class AppenderTrait {
+        class AppenderTrait : Noncopyable {
         public:
             AppenderTrait() noexcept;
             virtual ~AppenderTrait() noexcept;
-            AppenderTrait(const AppenderTrait&) = delete;
-            AppenderTrait& operator=(const AppenderTrait&) = delete;
-            AppenderTrait(AppenderTrait&&) noexcept = delete;
-            AppenderTrait& operator=(AppenderTrait&&) noexcept = delete;
         public:
             virtual void append(const void* buf, const std::size_t size) noexcept = 0; // 添加日志行
             virtual void flush() noexcept; // 刷新日志
         };
 
-        class LoggerTrait {
+        class LoggerTrait : Noncopyable {
         public:
             LoggerTrait(const Level level = Level::ERROR) noexcept;
             virtual ~LoggerTrait() noexcept;
-            LoggerTrait(const LoggerTrait&) = delete;
-            LoggerTrait& operator=(const LoggerTrait&) = delete;
-            LoggerTrait(LoggerTrait&&) noexcept = delete;
-            LoggerTrait& operator=(LoggerTrait&&) noexcept = delete;
         public:
             /// 日志记录函数，只有当日志级别大于等于当前设置的级别时才会记录
             /// @param level 日志级别

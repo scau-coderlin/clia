@@ -6,17 +6,19 @@
 #include <type_traits>
 #include <utility>
 
+#include "clia/base/copyable.hpp"
+
 namespace clia {
     namespace container {
         template <typename Tp, int Nm>
-        class FixedBuffer final {
+        class FixedBuffer final : Copyable {
+            using Self = FixedBuffer<Tp, Nm>;
+            static_assert(Nm > 0, "FixedBuffer size must be greater than 0");
         public:
             inline FixedBuffer() noexcept;
             inline ~FixedBuffer() noexcept;
-            FixedBuffer(const FixedBuffer&) = delete;
-            FixedBuffer& operator=(const FixedBuffer&) = delete;
-            FixedBuffer(FixedBuffer&&) noexcept = delete;  
-            FixedBuffer& operator=(FixedBuffer&&) noexcept = delete;  
+            inline FixedBuffer(const Self &oth) noexcept;
+            inline FixedBuffer& operator=(const Self &oth) noexcept;
         public:
             inline const Tp* data() const noexcept ;
             inline Tp* data() noexcept;
@@ -48,6 +50,36 @@ inline clia::container::FixedBuffer<Tp, Nm>::FixedBuffer() noexcept
 template <typename Tp, int Nm>
 inline clia::container::FixedBuffer<Tp, Nm>::~FixedBuffer() noexcept {
     // No dynamic memory to release, so nothing to do here.
+}
+
+template <typename Tp, int Nm>
+inline clia::container::FixedBuffer<Tp, Nm>::FixedBuffer(const Self& oth) noexcept
+    : m_current(m_data) {
+    static_assert(Nm > 0, "FixedBuffer size must be greater than 0");
+    if (std::is_arithmetic<Tp>::value) {
+        std::memcpy(current(), oth.data(), oth.size() * sizeof(Tp));
+        add(oth.size());
+    }  else {
+        for (int i = 0; i < oth.size(); ++i) {
+            append(oth.data()[i]);
+        }
+    }
+}
+
+template <typename Tp, int Nm>
+inline clia::container::FixedBuffer<Tp, Nm>& ::clia::container::FixedBuffer<Tp, Nm>::operator=(const Self& oth) noexcept {
+    if (this != &oth) {
+        this->reset();
+        if (std::is_arithmetic<Tp>::value) {
+            std::memcpy(current(), oth.data(), oth.size() * sizeof(Tp));
+            add(oth.size());
+        }  else {
+            for (int i = 0; i < oth.size(); ++i) {
+                append(oth.data()[i]);
+            }
+        }
+    }
+    return *this;
 }
 
 template <typename Tp, int Nm>

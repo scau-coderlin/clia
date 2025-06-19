@@ -2,11 +2,12 @@
 
 #include <cstdio>
 
+#include "clia/base/nocopyable.hpp"
 #include "clia/log/trait.hpp"
 
 namespace clia {
     namespace log {
-        class StdoutLogger final : public LoggerTrait {
+        class StdoutLogger final : public LoggerTrait, Noncopyable {
         public:
             using LoggerTrait::LoggerTrait;
             ~StdoutLogger() = default;

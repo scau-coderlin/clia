@@ -3,18 +3,16 @@
 #include <memory>
 
 #include "clia/log/trait.hpp"
-#include "clia/log/stream.hpp"
+#include "clia/container/stream.hpp"
+#include "clia/base/nocopyable.hpp"
 
 namespace clia {
     namespace log {
-        class Event final {
+        class Event final : Noncopyable {
+            using Stream = clia::container::Stream<1024>;
         public:
             Event(std::shared_ptr<LoggerTrait> logger, const Level level, const char *file, const int line, const char *func) noexcept;
             ~Event() noexcept;
-            Event(const Event&) = delete;
-            Event& operator=(const Event&) = delete;
-            Event(Event&&) noexcept = delete;
-            Event& operator=(Event&&) noexcept = delete;
         public:
             Stream& stream() noexcept;
             void format(const char *fmt, ...) noexcept;

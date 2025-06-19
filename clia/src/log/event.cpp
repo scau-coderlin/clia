@@ -34,7 +34,7 @@ clia::log::Event::~Event() noexcept {
     }
 }
 
-clia::log::Stream& clia::log::Event::stream() noexcept {
+clia::log::Event::Stream& clia::log::Event::stream() noexcept {
     return m_stream;
 }
 

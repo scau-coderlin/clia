@@ -7,11 +7,12 @@
 #include <string>
 #include <memory>
 
+#include "clia/base/nocopyable.hpp"
 #include "clia/log/trait.hpp"
 
 namespace clia {
     namespace log {
-        class FileAppender : public AppenderTrait {
+        class FileAppender : public AppenderTrait, Noncopyable {
         public:
         FileAppender(
             const char *path, 

@@ -8,21 +8,16 @@
 #include <thread>
 #include <condition_variable>
 
+#include "clia/base/nocopyable.hpp"
 #include "clia/log/trait.hpp"
 #include "clia/container/fixed_buffer.hpp"
 
 namespace clia {
     namespace log {
-        class AsyncLogger final : public LoggerTrait {
+        class AsyncLogger final : public LoggerTrait, Noncopyable {
         public:
             explicit AsyncLogger(clia::log::Level level, int flush_interval_sec = 3) noexcept;
             ~AsyncLogger() noexcept;
-
-            AsyncLogger(const AsyncLogger&) = delete;
-            AsyncLogger& operator=(const AsyncLogger&) = delete;
-            AsyncLogger(AsyncLogger&&) noexcept = delete;
-            AsyncLogger& operator=(AsyncLogger&&) noexcept = delete;
-
         public:
             void log(const void *message, const std::size_t len) noexcept override; // 异步日志记录方法
             void start() noexcept;

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef CLIA_BASE_NOCOPYABLE_H_
+#define CLIA_BASE_NOCOPYABLE_H_
 
 namespace clia {
     class Noncopyable {
@@ -10,3 +11,5 @@ namespace clia {
         ~Noncopyable() = default;
     };
 }
+
+#endif

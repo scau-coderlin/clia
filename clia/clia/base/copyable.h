@@ -1,4 +1,5 @@
-#pragma once
+#ifndef CLIA_BASE_COPYABLE_H_
+#define CLIA_BASE_COPYABLE_H_
 
 namespace clia {
     class Copyable {
@@ -7,3 +8,5 @@ namespace clia {
         inline ~Copyable() = default;
     };
 }
+
+#endif

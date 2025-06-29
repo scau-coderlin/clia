@@ -1,4 +1,5 @@
-#pragma once
+#ifndef CLIA_UTIL_PROCESS_H_
+#define CLIA_UTIL_PROCESS_H_
 
 namespace clia {
     namespace util {
@@ -15,7 +16,9 @@ namespace clia {
             /// @param ec 错误码
             /// @return 返回错误码对应的字符串描述
             /// @note 该函数是线程安全的，且不会使用动态内存分配
-            const char* strerror(const int ec) noexcept;
+            extern const char* strerror(const int ec) noexcept;
         }
     }
 }
+
+#endif

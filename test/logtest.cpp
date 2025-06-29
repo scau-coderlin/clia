@@ -4,51 +4,50 @@
 #include <thread>
 #include <vector>
 
-#include "clia/log/event.hpp"
-#include "clia/log/async_logger.hpp"
-#include "clia/log/file_appender.hpp"
-#include "clia/log/trait.hpp"
+#include "clia/log/async_logger.h"
+#include "clia/log/file_appender.h"
+#include "clia/log.h"
 
-class TimeS {
+class TimeConsumingStatistics {
 private:
-    std::time_t m_start;
+    const std::time_t start_;
 public:
-    TimeS() {
-        m_start = std::time(nullptr);
+    TimeConsumingStatistics()
+        : start_(std::time(nullptr)) 
+    {
+        ;
     }
-    ~TimeS() {
+    ~TimeConsumingStatistics() {
         const auto end = std::time(nullptr);
-        std::cout << "Time elapsed: " << (end - m_start) << " seconds." << std::endl;
+        std::cout << "Time elapsed: " << (end - start_) << " seconds." << std::endl;
     }
 };
 
-TimeS _;
+TimeConsumingStatistics _;
 
 int main(int argc, char *argv[]) {
     std::cout << "hello world" << std::endl;
-    std::shared_ptr<clia::log::AsyncLogger> logger(new clia::log::AsyncLogger(clia::log::Level::INFO));
-    std::shared_ptr<clia::log::FileAppender> appender(new clia::log::FileAppender("./", "testlog"));
-    logger->set_appender(appender);
-    logger->start();
+    std::shared_ptr<clia::log::trait::Appender> appender(new clia::log::FileAppender("./", "testlog"));
+    std::shared_ptr<clia::log::trait::Logger> logger(new clia::log::AsyncLogger(clia::log::Level::kInfo, appender));
+    clia::log::LoggerManger::instance()->set_default(logger);
 
-    bool m_start = false;
+    bool running = false;
     std::atomic<unsigned long> count;
     count = 0;
     std::vector<std::thread> threads;
     for (int i = 0; i < std::atoi(argv[1]); ++i) {
         threads.emplace_back([&]() {
-            while (!m_start) {
+            while (!running) {
                 ;
             }
             for (int i = 0; i < std::atoi(argv[2]); ++i) {
-                clia::log::Event(logger, clia::log::Level::INFO, __FILE_NAME__, __LINE__, __func__)
-                    .stream() << "Hello, " << "world" << "! This is a test log message with value: " << count++;
+                CLIA_LOG_INFO  << "Hello, " << "world" << "! This is a test log message with value: " << count++;
             }
         });
     }
 
     const auto start = std::time(nullptr);
-    m_start = true;
+    running = true;
     for (auto &t : threads) {
         if (t.joinable()) {
             t.join();

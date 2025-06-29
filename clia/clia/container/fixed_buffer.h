@@ -1,4 +1,5 @@
-#pragma once
+#ifndef CLIA_CONTAINER_FIXED_BUFFER_H_
+#define CLIA_CONTAINER_FIXED_BUFFER_H_
 
 #include <cassert>
 #include <cstddef>
@@ -6,116 +7,77 @@
 #include <type_traits>
 #include <utility>
 
-#include "clia/base/copyable.hpp"
+#include "clia/base/noncopyable.h"
 
 namespace clia {
     namespace container {
         template <typename Tp, int Nm>
-        class FixedBuffer final : Copyable {
+        class FixedBuffer final : Noncopyable {
             using Self = FixedBuffer<Tp, Nm>;
             static_assert(Nm > 0, "FixedBuffer size must be greater than 0");
         public:
             inline FixedBuffer() noexcept;
             inline ~FixedBuffer() noexcept;
-            inline FixedBuffer(const Self &oth) noexcept;
-            inline FixedBuffer& operator=(const Self &oth) noexcept;
         public:
-            inline const Tp* data() const noexcept ;
-            inline Tp* data() noexcept;
-            inline int size() const noexcept;
-            inline int max_size() const noexcept;
-            inline void resize(const std::size_t sz) noexcept;
-            inline int avail() const noexcept;
-            inline void reset() noexcept;
             inline void append(const Tp& value) noexcept;
             inline void append(Tp&& value) noexcept;
-            inline void append_range(const Tp* values, const std::size_t len) noexcept;
+            inline void append(const Tp *buf, const std::size_t len) noexcept;
+            
+            inline const Tp* data() const noexcept;
+            inline Tp* data() noexcept;
+            inline int size() const noexcept;
+            inline int avail() const noexcept;
+            inline void reset() noexcept;
             inline Tp* current() noexcept;
             inline void add(const std::size_t len) noexcept;
+        public:
+            static inline int max_size() noexcept;
         private:
             inline const Tp* end() const noexcept;
         private:
-            Tp *m_current = nullptr;
-            Tp m_data[Nm];
+            Tp data_[Nm];
+            Tp *cur_ = nullptr;
         };
     }
 }
 
 template <typename Tp, int Nm>
-inline clia::container::FixedBuffer<Tp, Nm>::FixedBuffer() noexcept
-    : m_current(m_data) {
+inline clia::container::FixedBuffer<Tp, Nm>::FixedBuffer() noexcept {
+    this->reset();
     static_assert(Nm > 0, "FixedBuffer size must be greater than 0");
 }
 
 template <typename Tp, int Nm>
-inline clia::container::FixedBuffer<Tp, Nm>::~FixedBuffer() noexcept {
-    // No dynamic memory to release, so nothing to do here.
-}
-
-template <typename Tp, int Nm>
-inline clia::container::FixedBuffer<Tp, Nm>::FixedBuffer(const Self& oth) noexcept
-    : m_current(m_data) {
-    static_assert(Nm > 0, "FixedBuffer size must be greater than 0");
-    if (std::is_arithmetic<Tp>::value) {
-        std::memcpy(current(), oth.data(), oth.size() * sizeof(Tp));
-        add(oth.size());
-    }  else {
-        for (int i = 0; i < oth.size(); ++i) {
-            append(oth.data()[i]);
-        }
-    }
-}
-
-template <typename Tp, int Nm>
-inline clia::container::FixedBuffer<Tp, Nm>& ::clia::container::FixedBuffer<Tp, Nm>::operator=(const Self& oth) noexcept {
-    if (this != &oth) {
-        this->reset();
-        if (std::is_arithmetic<Tp>::value) {
-            std::memcpy(current(), oth.data(), oth.size() * sizeof(Tp));
-            add(oth.size());
-        }  else {
-            for (int i = 0; i < oth.size(); ++i) {
-                append(oth.data()[i]);
-            }
-        }
-    }
-    return *this;
-}
+inline clia::container::FixedBuffer<Tp, Nm>::~FixedBuffer() noexcept = default;
 
 template <typename Tp, int Nm>
 inline const Tp* clia::container::FixedBuffer<Tp, Nm>::data() const noexcept {
-    return m_data;
+    return data_;
 }
 
 template <typename Tp, int Nm>
 inline Tp* clia::container::FixedBuffer<Tp, Nm>::data() noexcept {
-    return m_data;
+    return data_;
 }
 
 template <typename Tp, int Nm>
 inline int clia::container::FixedBuffer<Tp, Nm>::size() const noexcept {
-    return static_cast<int>(m_current - data());
+    return static_cast<int>(cur_ - data());
 }
 
 template <typename Tp, int Nm>
-inline int clia::container::FixedBuffer<Tp, Nm>::max_size() const noexcept {
+inline int clia::container::FixedBuffer<Tp, Nm>::max_size() noexcept {
     return Nm;
 }
 
 template <typename Tp, int Nm>
-inline void clia::container::FixedBuffer<Tp, Nm>::resize(const std::size_t sz) noexcept {
-    assert(sz < Nm);
-    m_current = m_data + sz;
-}
-
-template <typename Tp, int Nm>
 inline int clia::container::FixedBuffer<Tp, Nm>::avail() const noexcept { 
-    return static_cast<int>(end() - m_current); 
+    return static_cast<int>(end() - cur_); 
 }
 
 template <typename Tp, int Nm>
 inline void clia::container::FixedBuffer<Tp, Nm>::reset() noexcept { 
-    m_current = m_data; 
+    cur_ = data_; 
 }
 
 template <typename Tp, int Nm>
@@ -133,7 +95,7 @@ inline void clia::container::FixedBuffer<Tp, Nm>::append(Tp&& value) noexcept {
 }
 
 template <typename Tp, int Nm>
-inline void clia::container::FixedBuffer<Tp, Nm>::append_range(const Tp* values, const std::size_t len) noexcept {
+inline void clia::container::FixedBuffer<Tp, Nm>::append(const Tp* values, const std::size_t len) noexcept {
     assert(len < avail());
     if (std::is_arithmetic<Tp>::value) {
         std::memcpy(current(), values, len * sizeof(Tp));
@@ -147,16 +109,18 @@ inline void clia::container::FixedBuffer<Tp, Nm>::append_range(const Tp* values,
 
 template <typename Tp, int Nm>
 inline Tp* clia::container::FixedBuffer<Tp, Nm>::current() noexcept {
-    return m_current;
+    return cur_;
 }
 
 template <typename Tp, int Nm>
 inline void clia::container::FixedBuffer<Tp, Nm>::add(const std::size_t len) noexcept { 
     assert(avail() > len);
-    m_current += len; 
+    cur_ += len; 
 }
 
 template <typename Tp, int Nm>
 inline const Tp* clia::container::FixedBuffer<Tp, Nm>::end() const noexcept { 
-    return m_data + Nm; 
+    return data_ + Nm; 
 }
+
+#endif

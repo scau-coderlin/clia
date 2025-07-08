@@ -4,6 +4,7 @@
 #include <cassert>
 #include <ctime>
 #include <cstring>
+#include <iostream>
 
 #include <string>
 #include <vector>
@@ -11,93 +12,28 @@
 #include <unistd.h> // access
 #include <sys/stat.h> // stat
 #include <dirent.h>
+#include <fcntl.h>
 
 #include "clia/log/file_appender.h"
 #include "clia/util/process.h"
 
-class clia::log::FileAppender::Impl {
-    class AppendFile;
-public:
-    Impl(
-        const char *path, 
-        const char *logname, 
-        const std::size_t roll_size_byte,   // 默认1MB
-        const int roll_period_days,
-        const int retain_period_day,        // 保留周期6个月
-        const int check_every,              // 每1024次检查一次是否需要滚动
-        const bool thread_safe
-    );
-    ~Impl();
-public:
-    void append(const void *buf, const std::size_t size) noexcept;
-    void flush() noexcept;
-private:
-    std::size_t get_date_prefix(char *outbuf, const std::size_t size, const std::time_t now);
-    void roll_file() noexcept;
-    std::string get_logfilename() noexcept;
-    void append_unlocked(const void *buf, const std::size_t size) noexcept;
-    void del_old_files() noexcept; 
-private:
-    const std::string path_;
-    const std::string logname_;
-    const std::size_t roll_size_byte_;
-    const std::time_t roll_period_sec_;
-    const int retain_period_sec_;
-    const int check_every_;
-    int count_;
-    std::time_t last_roll_time_;
-    std::time_t this_roll_period_;
-    std::unique_ptr<std::mutex> lck_;
-    std::unique_ptr<AppendFile> file_;
-};
+namespace {
+    static inline std::size_t get_date_prefix(char *outbuf, const std::size_t size, const std::time_t t) {
+        struct tm tm_info;
+        localtime_r(&t, &tm_info);
+        // 格式化时间到缓冲区（不含毫秒）
+        return std::strftime(outbuf, size, "%Y%m%d%H%M%S", &tm_info);
+    }
+}
 
 clia::log::FileAppender::FileAppender(
     const char *path, 
     const char *logname, 
-    const std::size_t roll_size_bytes, // 默认1MB
+    const std::size_t roll_size_byte, // 默认1MB
     const int roll_period_days,
     const int retain_period_day, 
     const int check_every, // 每1024次检查一次是否需要滚动
     const bool thread_safe 
-)   : impl_(new Impl(path, logname, roll_size_bytes, roll_period_days, retain_period_day, check_every, thread_safe))
-{
-   ;
-}
-
-clia::log::FileAppender::~FileAppender() {
-    ;
-}
-
-void clia::log::FileAppender::append(const void *buf, const std::size_t size) noexcept {
-    return impl_->append(buf, size);
-}
-
-void clia::log::FileAppender::flush() noexcept {
-    return impl_->flush();
-}
-
-class clia::log::FileAppender::Impl::AppendFile final {
-public:
-    explicit AppendFile(const char *filename) noexcept;
-    ~AppendFile() noexcept;
-    void append(const void *buf, const std::size_t size) noexcept;
-public:
-    void flush() noexcept;
-    std::size_t written_bytes() const noexcept;
-private:
-    std::FILE* fp_ = nullptr;
-    std::size_t written_bytes_ = 0;
-    char buffer_[64 * 1024];
-};
-
-clia::log::FileAppender::Impl::Impl(
-    const char *path, 
-    const char *logname, 
-    const std::size_t roll_size_byte,   // 默认1MB
-    const int roll_period_days,
-    const int retain_period_day,        // 保留周期6个月
-    const int check_every,              // 每1024次检查一次是否需要滚动
-    const bool thread_safe
 )   : path_(path)
     , logname_(logname)
     , roll_size_byte_(roll_size_byte)
@@ -108,6 +44,7 @@ clia::log::FileAppender::Impl::Impl(
     , last_roll_time_(0)
     , this_roll_period_(0)
     , lck_(thread_safe ? new std::mutex : nullptr) 
+    , written_bytes_(0)
 {
     if (::access(path_.c_str(), F_OK) != 0) {
         ::mkdir(path_.c_str(), 0755);
@@ -115,11 +52,13 @@ clia::log::FileAppender::Impl::Impl(
     roll_file();
 }
 
-clia::log::FileAppender::Impl::~Impl() {
-
+clia::log::FileAppender::~FileAppender() {
+    if (file_.is_open()) {
+        file_.close();
+    }
 }
 
-void clia::log::FileAppender::Impl::append(const void *buf, const std::size_t size) noexcept {
+void clia::log::FileAppender::append(const void *buf, const std::size_t size) noexcept {
     if (!buf || size <= 0) {
         return;
     }
@@ -131,40 +70,50 @@ void clia::log::FileAppender::Impl::append(const void *buf, const std::size_t si
     }
 }
 
-void clia::log::FileAppender::Impl::flush() noexcept {
-    if (lck_) {
-        std::lock_guard<std::mutex> lock(*lck_);
-        file_->flush();
-    } else {
-        file_->flush();
-    }
+void clia::log::FileAppender::flush() noexcept {
+    file_.flush();
 }
 
-std::size_t clia::log::FileAppender::Impl::get_date_prefix(char *outbuf, const std::size_t size, const std::time_t t) {
-    struct tm tm_info;
-    localtime_r(&t, &tm_info);
-    // 格式化时间到缓冲区（不含毫秒）
-    return std::strftime(outbuf, size, "%Y%m%d%H%M%S", &tm_info);
-}
-
-void clia::log::FileAppender::Impl::roll_file() noexcept {
+void clia::log::FileAppender::roll_file() noexcept {
     const std::time_t now = std::time(nullptr);
     if (last_roll_time_ != now) {
+        bool check_period = false;
+        if (written_bytes_ < roll_size_byte_) {
+            ++count_;
+            if (count_ < check_every_) {
+                return;
+            } 
+            count_ = 0;
+            check_period = true;
+        } 
+        const std::time_t this_period = now / roll_period_sec_ * roll_period_sec_;
+        if (check_period && this_period == this_roll_period_) {
+            return;
+        } 
+
         const auto filename = get_logfilename();
         last_roll_time_ = now;
-        this_roll_period_ = now / roll_period_sec_ * roll_period_sec_;
-        file_.reset(new AppendFile(filename.c_str()));
+        this_roll_period_ = this_period;
+        if (file_) {
+            file_.close();
+        }
+        file_ .open(filename, std::ios::app);
+        if (!file_.is_open()) {
+            std::fprintf(stderr, "fopen log [%s] err, errno = [%d][%s]\n", filename.c_str(), errno, clia::util::process::strerror(errno));
+            std::abort();
+        }
+        written_bytes_ = 0;
         del_old_files();
     }
 }
 
-std::string clia::log::FileAppender::Impl::get_logfilename() noexcept {
+std::string clia::log::FileAppender::get_logfilename() noexcept {
     std::string filename;
     filename.reserve(path_.size() + logname_.size() + 64);
 
     const auto t = std::time(nullptr);
     char timebuf[32] = {0};
-    get_date_prefix(timebuf, sizeof(timebuf), t);
+    ::get_date_prefix(timebuf, sizeof(timebuf), t);
     filename += path_;
     if (!filename.empty() && filename.back() != '/') {
         filename += '/';
@@ -186,24 +135,13 @@ std::string clia::log::FileAppender::Impl::get_logfilename() noexcept {
     return filename;
 }
 
-void clia::log::FileAppender::Impl::append_unlocked(const void *buf, const std::size_t size) noexcept {
-    file_->append(buf, size);
-
-    if (file_->written_bytes() >= roll_size_byte_) {
-        roll_file();
-    } else {
-        ++count_;
-        if (count_ >= check_every_) {
-            count_ = 0;
-            const time_t this_period = std::time(nullptr) / roll_period_sec_ * roll_period_sec_;
-            if (this_period != this_roll_period_) {
-                roll_file();
-            } 
-        }
-    }
+void clia::log::FileAppender::append_unlocked(const void *buf, const std::size_t size) noexcept {
+    roll_file();
+    file_.write(static_cast<const char*>(buf), size);
+    written_bytes_ += size;
 }
 
-void clia::log::FileAppender::Impl::del_old_files() noexcept {
+void clia::log::FileAppender::del_old_files() noexcept {
     // 删除过期的日志文件
     const std::time_t old = std::time(nullptr) - retain_period_sec_;
     char timebuf[32] = {0};
@@ -229,43 +167,3 @@ void clia::log::FileAppender::Impl::del_old_files() noexcept {
         std::remove(oldfile.c_str());
     }
 } 
-
-
-clia::log::FileAppender::Impl::AppendFile::AppendFile(const char *filename) noexcept
-    : fp_(std::fopen(filename, "ae")) // 打开文件以追加模式
-{
-    assert(fp_ != nullptr); // 确保文件成功打开
-    ::setbuffer(fp_, buffer_, sizeof(buffer_));
-}
-
-clia::log::FileAppender::Impl::AppendFile::~AppendFile() noexcept {
-    std::fflush(fp_);
-    ::fsync(::fileno(fp_));
-    std::fclose(fp_);
-    fp_ = nullptr;
-}
-
-void clia::log::FileAppender::Impl::AppendFile::append(const void *buf, const std::size_t size) noexcept {
-    std::size_t written = 0;
-    while (written != size) {
-        const size_t remain = size - written;
-        const auto n = ::fwrite_unlocked(static_cast<const unsigned char*>(buf) + written, 1, remain, fp_);
-        if (n != remain) {
-            const int err = std::ferror(fp_);
-            if (err) {
-                fprintf(stderr, "AppendFile::append() failed %s\n", clia::util::process::strerror(err));
-                break;
-            }
-        }
-        written += n;
-    } 
-    written_bytes_ += written;
-}
-
-void clia::log::FileAppender::Impl::AppendFile::flush() noexcept {
-    std::fflush(fp_);
-}
-
-std::size_t clia::log::FileAppender::Impl::AppendFile::written_bytes() const noexcept { 
-    return written_bytes_; 
-}

@@ -3,8 +3,14 @@
 
 #include <cstddef>
 #include <memory>
+#include <mutex>
+#include <vector>
+#include <atomic>
+#include <thread>
+#include <condition_variable>
 
 #include "clia/log/trait.h"
+#include "clia/container/fixed_buffer.h"
 
 namespace clia {
     namespace log {
@@ -15,8 +21,20 @@ namespace clia {
         public:
             void log(const Level level, const void *message, const std::size_t len) noexcept override; // 异步日志记录方法
         private:
-            class Impl;
-            std::unique_ptr<Impl> impl_;
+            inline void sync_thread();
+        private:
+            using Buffer = clia::container::FixedBuffer<char, 4 * 1024 * 1024>;
+            using BufferVector = std::vector<std::unique_ptr<Buffer>>;
+            using BufferPtr = BufferVector::value_type;
+        private:
+            const int flush_interval_sec_;
+            BufferPtr current_buffer_;
+            BufferPtr next_buffer_;
+            BufferVector buffers_;
+            std::atomic<bool> running_;
+            std::thread thread_;
+            std::mutex lck_;
+            std::condition_variable cond_;
         };
         // 其他成员函数和数据成员可以根据需要添加
     } // namespace log

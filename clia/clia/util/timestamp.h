@@ -16,6 +16,8 @@ namespace clia {
             Timestamp() noexcept;
             ~Timestamp() noexcept;
             explicit Timestamp(std::int64_t micro_sec_since_epoch) noexcept;
+            Timestamp(const Timestamp &oth) noexcept;
+            Timestamp& operator=(const Timestamp &oth) noexcept;
         public:
             std::int64_t micro_sec_since_epoch() const noexcept;
             std::time_t sec_since_epoch() const noexcept;

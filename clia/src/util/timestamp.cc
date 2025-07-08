@@ -15,6 +15,18 @@ clia::util::Timestamp::Timestamp(std::int64_t micro_sec_since_epoch) noexcept
 {
     ;
 }
+
+clia::util::Timestamp::Timestamp(const Timestamp &oth) noexcept 
+    : micro_sec_since_epoch_(oth.micro_sec_since_epoch()) {
+
+}
+clia::util::Timestamp& clia::util::Timestamp::operator=(const Timestamp &oth) noexcept {
+    if (this != &oth) {
+        this->micro_sec_since_epoch_ = oth.micro_sec_since_epoch();
+    }
+    return *this;
+}
+
 std::int64_t clia::util::Timestamp::micro_sec_since_epoch() const noexcept {
     return micro_sec_since_epoch_;
 }

@@ -32,7 +32,7 @@ namespace clia {
                 ///       该函数会被 Logger 调用来记录日志
                 ///       该函数不需要处理日志级别和日志时间戳等信息
                 ///       该函数只需要处理日志行内容的追加
-                virtual void append(const void* buf, const std::size_t size) noexcept = 0; // 添加日志行
+                virtual void append(const void *buf, const std::size_t size) noexcept = 0; // 添加日志行
                 /// flush() 函数用于刷新日志记录器
                 /// @note 该函数是纯虚函数，具体的实现需要在子类中实现
                 ///       该函数不要求是线程安全的

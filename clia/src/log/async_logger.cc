@@ -12,67 +12,29 @@
 #include "clia/util/timestamp.h"
 #include "clia/container/fixed_buffer.h"
 
-class clia::log::AsyncLogger::Impl {
-public:
-    explicit inline Impl(trait::Appender *const appender, const int flush_interval_sec) noexcept;
-    inline ~Impl() noexcept;
-public:
-    inline void log(const void *message, const std::size_t len) noexcept;
-private:
-    inline void thread();
-private:
-    using Buffer = clia::container::FixedBuffer<char, 4 * 1024 * 1024>;
-    using BufferVector = std::vector<std::unique_ptr<Buffer>>;
-    using BufferPtr = BufferVector::value_type;
-private:
-    trait::Appender *const appender_;
-    const int flush_interval_sec_;
-    BufferPtr current_buffer_;
-    BufferPtr next_buffer_;
-    BufferVector buffers_;
-    std::atomic<bool> running_;
-    std::thread thread_;
-    std::mutex lck_;
-    std::condition_variable cond_;
-};
-
-
 clia::log::AsyncLogger::AsyncLogger(const Level level, std::shared_ptr<trait::Appender> appender, const int flush_interval_sec) noexcept
     : trait::Logger(level, appender)
-    , impl_(new Impl(appender_.get(), flush_interval_sec))
-{
-    ;
-}
-
-clia::log::AsyncLogger::~AsyncLogger() noexcept = default;
-
-void clia::log::AsyncLogger::log(const Level level, const void *message, const std::size_t len) noexcept {
-    if (level < level_) {
-        return; // Ignore messages below the current log level
-    }
-    impl_->log(message, len);
-}
-
-
-inline clia::log::AsyncLogger::Impl::Impl(trait::Appender *const appender, const int flush_interval_sec) noexcept 
-        : appender_(appender)
-        , flush_interval_sec_(flush_interval_sec)
-        , current_buffer_(new Buffer)
-        , next_buffer_(new Buffer)
+    , flush_interval_sec_(flush_interval_sec)
+    , current_buffer_(new Buffer)
+    , next_buffer_(new Buffer)
 {
     buffers_.reserve(16);
     running_ = true;
-    thread_ = std::thread(&Impl::thread, this);
+    thread_ = std::thread(&AsyncLogger::sync_thread, this);
 }
 
-inline clia::log::AsyncLogger::Impl::~Impl() noexcept {
+clia::log::AsyncLogger::~AsyncLogger() noexcept {
     running_ = false;
+    cond_.notify_one();
     if (thread_.joinable()) {
         thread_.join();
     }
 }
 
-inline void clia::log::AsyncLogger::Impl::log(const void *message, const std::size_t len) noexcept {
+void clia::log::AsyncLogger::log(const Level level, const void *message, const std::size_t len) noexcept {
+    if (level < level_) {
+        return; // Ignore messages below the current log level
+    }
     if (!message || 0 == len || len > Buffer::max_size() || !running_) {
         return; // Ignore messages below the current log level
     }
@@ -91,14 +53,14 @@ inline void clia::log::AsyncLogger::Impl::log(const void *message, const std::si
     }
 }
 
-inline void clia::log::AsyncLogger::Impl::thread() {
+inline void clia::log::AsyncLogger::sync_thread() {
     assert(appender_ != nullptr);
     BufferPtr new_buffer1(new Buffer);
     BufferPtr new_buffer2(new Buffer);
     BufferVector write_buffers;
     write_buffers.reserve(16);
 
-    while (running_) {
+    while (running_ || current_buffer_->size() != 0) {
         assert(new_buffer1 && new_buffer1->size() == 0);
         assert(new_buffer2 && new_buffer2->size() == 0);
         assert(write_buffers.empty());

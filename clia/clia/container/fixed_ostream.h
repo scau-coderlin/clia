@@ -27,6 +27,7 @@ namespace clia {
             inline void format(const char *fmt, ...) noexcept;
             inline void format(const char *fmt, va_list al) noexcept;
         public:
+            inline Self& operator<<(const void *ptr) noexcept;
             inline Self& operator<<(const char *str) noexcept;
             inline Self& operator<<(const char val) noexcept;
             inline Self& operator<<(const float val) noexcept;
@@ -76,6 +77,13 @@ template <int Nm>
 inline void clia::container::FixedOStream<Nm>::format(const char *fmt, std::va_list args) noexcept {
     const auto n = std::vsnprintf(buffer_.current(), buffer_.avail(), fmt, args);
     buffer_.add(n);
+}
+
+template <int Nm>
+inline clia::container::FixedOStream<Nm>& clia::container::FixedOStream<Nm>::operator<<(const void *ptr) noexcept {
+    const auto n = std::snprintf(buffer_.current(), buffer_.avail(), "0x%p", ptr);
+    buffer_.add(n);
+    return *this;
 }
 
 template <int Nm>

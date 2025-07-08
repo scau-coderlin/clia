@@ -23,7 +23,7 @@
 #define CLIA_LOG_FATAL  CLIA_LOG_LEVEL(clia::log::Level::kFatal)
 
 #define CLIA_FMT_LOG(LOGGER, LEVEL, ...) do { \
-    if (LOGGER && LOGGER->get_level() <= LEVEL) { \
+    if (LOGGER && LOGGER->level() <= LEVEL) { \
         clia::log::Event(LOGGER, LEVEL, __FILE__, __LINE__, __FUNCTION__).format(__VA_ARGS__); \
     } \
 } while (0);

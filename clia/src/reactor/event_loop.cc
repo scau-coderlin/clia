@@ -116,6 +116,12 @@ void clia::reactor::EventLoop::update_channel(Channel *channel) {
     poller_->update_channel(channel);
 }
 
+bool clia::reactor::EventLoop::has_channel(Channel *channel) const {
+    assert(channel->owner_loop() == this);
+    assert(this->is_in_loop_thread());
+    return poller_->has_channel(channel);
+}
+
 // 给eventfd返回的文件描述符wakeup绑定的事件回调，唤醒epoll_wait
 void clia::reactor::EventLoop::handle_read() {
     std::uint64_t one = 1;

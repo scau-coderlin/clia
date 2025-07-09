@@ -20,7 +20,7 @@
 namespace {
     static inline std::size_t get_date_prefix(char *outbuf, const std::size_t size, const std::time_t t) {
         struct tm tm_info;
-        localtime_r(&t, &tm_info);
+        ::localtime_r(&t, &tm_info);
         // 格式化时间到缓冲区（不含毫秒）
         return std::strftime(outbuf, size, "%Y%m%d%H%M%S", &tm_info);
     }
@@ -49,7 +49,7 @@ clia::log::FileAppender::FileAppender(
     if (::access(path_.c_str(), F_OK) != 0) {
         ::mkdir(path_.c_str(), 0755);
     }
-    roll_file();
+    this->roll_file();
 }
 
 clia::log::FileAppender::~FileAppender() {
@@ -64,9 +64,9 @@ void clia::log::FileAppender::append(const void *buf, const std::size_t size) no
     }
     if (lck_) {
         std::lock_guard<std::mutex> lock(*lck_);
-        append_unlocked(buf, size);
+        this->append_unlocked(buf, size);
     } else {
-        append_unlocked(buf, size);
+        this->append_unlocked(buf, size);
     }
 }
 
@@ -79,7 +79,6 @@ void clia::log::FileAppender::roll_file() noexcept {
     if (last_roll_time_ != now) {
         bool check_period = false;
         if (written_bytes_ < roll_size_byte_) {
-            ++count_;
             if (count_ < check_every_) {
                 return;
             } 
@@ -91,7 +90,7 @@ void clia::log::FileAppender::roll_file() noexcept {
             return;
         } 
 
-        const auto filename = get_logfilename();
+        const auto filename = this->get_logfilename();
         last_roll_time_ = now;
         this_roll_period_ = this_period;
         if (file_) {
@@ -103,7 +102,7 @@ void clia::log::FileAppender::roll_file() noexcept {
             std::abort();
         }
         written_bytes_ = 0;
-        del_old_files();
+        this->del_old_files();
     }
 }
 
@@ -136,7 +135,8 @@ std::string clia::log::FileAppender::get_logfilename() noexcept {
 }
 
 void clia::log::FileAppender::append_unlocked(const void *buf, const std::size_t size) noexcept {
-    roll_file();
+    ++count_;
+    this->roll_file();
     file_.write(static_cast<const char*>(buf), size);
     written_bytes_ += size;
 }
@@ -145,7 +145,7 @@ void clia::log::FileAppender::del_old_files() noexcept {
     // 删除过期的日志文件
     const std::time_t old = std::time(nullptr) - retain_period_sec_;
     char timebuf[32] = {0};
-    const auto timebuflen = get_date_prefix(timebuf, sizeof(timebuf), old);
+    const auto timebuflen = ::get_date_prefix(timebuf, sizeof(timebuf), old);
     std::vector<std::string> old_files;
     ::DIR *dir = ::opendir(path_.c_str());
     if (!dir) {

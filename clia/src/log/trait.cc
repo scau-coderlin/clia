@@ -28,5 +28,5 @@ clia::log::trait::Logger::Logger(const Level level, std::shared_ptr<Appender> ap
 }
 
 clia::log::Level clia::log::trait::Logger::level() const noexcept {
-    return level_;;
+    return level_;
 }

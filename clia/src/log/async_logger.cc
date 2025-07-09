@@ -32,10 +32,7 @@ clia::log::AsyncLogger::~AsyncLogger() noexcept {
 }
 
 void clia::log::AsyncLogger::log(const Level level, const void *message, const std::size_t len) noexcept {
-    if (level < level_) {
-        return; // Ignore messages below the current log level
-    }
-    if (!message || 0 == len || len > Buffer::max_size() || !running_) {
+    if (level < level_ || nullptr == message || 0 == len || len > Buffer::max_size() || !running_) {
         return; // Ignore messages below the current log level
     }
     std::lock_guard<std::mutex> lck(lck_);
@@ -70,17 +67,9 @@ inline void clia::log::AsyncLogger::sync_thread() {
                 cond_.wait_for(lck, std::chrono::seconds(flush_interval_sec_));
             }
             buffers_.push_back(std::move(current_buffer_));
-            if (new_buffer1) {
-                current_buffer_ = std::move(new_buffer1);
-            } else {
-                current_buffer_.reset(new Buffer);
-            }
+            current_buffer_ = std::move(new_buffer1);
             if (!next_buffer_) {
-                if (new_buffer2) {
-                    next_buffer_ = std::move(new_buffer2);
-                } else {
-                    next_buffer_.reset(new Buffer);
-                }
+                next_buffer_ = std::move(new_buffer2);
             }
             write_buffers.swap(buffers_);
         }
@@ -104,11 +93,6 @@ inline void clia::log::AsyncLogger::sync_thread() {
                 continue; // Skip empty buffers
             }
             appender_->append(buffer->data(), buffer->size());
-        }
-
-        if (write_buffers.size() > 2) {
-            // drop non-bzero-ed buffers, avoid trashing
-            write_buffers.resize(2);
         }
 
         if (!new_buffer1) {

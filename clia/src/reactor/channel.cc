@@ -17,23 +17,30 @@ clia::reactor::Channel::Channel(EventLoop *loop, const int fd) noexcept
     , events_(0)
     , revents_(0)
     , index_(-1) 
+    , event_handling_(false)
+    , added_to_loop_(false)
     , tied_(false)
 {
-    ;
+    assert(fd != -1);
+    assert(loop_ != nullptr);
 }
 
 clia::reactor::Channel::~Channel() {
-
+    assert(!event_handling_);
+    assert(!added_to_loop_);
+    if (loop_->is_in_loop_thread()) {
+        assert(loop_->has_channel(this));
+    }
 }
 
 void clia::reactor::Channel::handle_event(clia::util::Timestamp receive_time) {
     if (tied_) {
-        auto guard = tie_.lock();
+        const auto guard = tie_.lock();
         if (guard) {
-            handle_event_with_guard(receive_time);
+            this->handle_event_with_guard(receive_time);
         }
     } else {
-        handle_event_with_guard(receive_time);
+        this->handle_event_with_guard(receive_time);
     }
 }
 void clia::reactor::Channel::set_read_callback(ReadEventCallback cb) {
@@ -71,27 +78,27 @@ void clia::reactor::Channel::set_revents(int revents) noexcept {
 
 void clia::reactor::Channel::enable_reading() noexcept {
     events_ |= kReadEvent;
-    update();
+    this->update();
 }
 
 void clia::reactor::Channel::disable_reading() noexcept {
     events_ &= ~kReadEvent;
-    update();
+    this->update();
 }
 
 void clia::reactor::Channel::enable_writing() noexcept {
     events_ |= kWriteEvent;
-    update();
+    this->update();
 }
 
 void clia::reactor::Channel::disable_writing() noexcept {
     events_ &= ~kWriteEvent;
-    update();
+    this->update();
 }
 
 void clia::reactor::Channel::disable_all() noexcept {
     events_ = kNoneEvent;
-    update(); 
+    this->update(); 
 }
 
 bool clia::reactor::Channel::is_none_event() const noexcept {
@@ -119,15 +126,18 @@ clia::reactor::EventLoop* clia::reactor::Channel::owner_loop() noexcept {
 }
 
 void clia::reactor::Channel::remove() noexcept {
-    assert(is_none_event());
+    assert(this->is_none_event());
+    added_to_loop_ = false;
     loop_->remove_channel(this);
 }
 
 void clia::reactor::Channel::update() {
+    added_to_loop_ = true;
     loop_->update_channel(this);
 }
 
 void clia::reactor::Channel::handle_event_with_guard(clia::util::Timestamp receive_time) {
+    event_handling_ = true;
     if ((revents_ & EPOLLHUP) && !(revents_ & EPOLLIN)) {
         if (close_callback_) {
             close_callback_();
@@ -149,4 +159,5 @@ void clia::reactor::Channel::handle_event_with_guard(clia::util::Timestamp recei
             write_callback_();
         }
     }
+    event_handling_ = false;
 }

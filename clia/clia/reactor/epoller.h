@@ -17,15 +17,14 @@ namespace clia {
             clia::util::Timestamp poll(int timeout_ms, ChannelList *active_channels);
             void update_channel(Channel *channel);
             void remove_channel(Channel *channel);
+            bool has_channel(Channel *channel) const;
         private:
             void fill_active_channels(int num_events, ChannelList *active_channels) const;
             void update(int operation, Channel *channel);
         private:
-            static constexpr int kInitEventListSize = 16;
-            using EventList = std::vector<::epoll_event>;
-            EventLoop *owner_loop_;
+            EventLoop *const owner_loop_;
             int epfd_;
-            EventList events_;
+            std::vector<::epoll_event> events_;
             ChannelMap channels_;
         };
     }

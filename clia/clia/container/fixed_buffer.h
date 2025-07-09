@@ -6,6 +6,7 @@
 #include <cstring>
 #include <type_traits>
 #include <utility>
+#include <algorithm>
 
 #include "clia/base/noncopyable.h"
 
@@ -62,7 +63,7 @@ inline Tp* clia::container::FixedBuffer<Tp, Nm>::data() noexcept {
 
 template <typename Tp, int Nm>
 inline int clia::container::FixedBuffer<Tp, Nm>::size() const noexcept {
-    return static_cast<int>(cur_ - data());
+    return static_cast<int>(cur_ - this->data());
 }
 
 template <typename Tp, int Nm>
@@ -72,7 +73,7 @@ inline int clia::container::FixedBuffer<Tp, Nm>::max_size() noexcept {
 
 template <typename Tp, int Nm>
 inline int clia::container::FixedBuffer<Tp, Nm>::avail() const noexcept { 
-    return static_cast<int>(end() - cur_); 
+    return static_cast<int>(this->end() - cur_); 
 }
 
 template <typename Tp, int Nm>
@@ -82,27 +83,27 @@ inline void clia::container::FixedBuffer<Tp, Nm>::reset() noexcept {
 
 template <typename Tp, int Nm>
 inline void clia::container::FixedBuffer<Tp, Nm>::append(const Tp& value) noexcept {
-    assert(avail() > 0);
-    *current() = value;
-    add(1);
+    assert(this->avail() > 0);
+    *this->current() = value;
+    this->add(1);
 }
 
 template <typename Tp, int Nm>
 inline void clia::container::FixedBuffer<Tp, Nm>::append(Tp&& value) noexcept {
-    assert(avail() > 0);
-    *current() = std::move(value);
-    add(1);
+    assert(this->avail() > 0);
+    *this->current() = std::move(value);
+    this->add(1);
 }
 
 template <typename Tp, int Nm>
 inline void clia::container::FixedBuffer<Tp, Nm>::append(const Tp* values, const std::size_t len) noexcept {
     assert(len < avail());
     if (std::is_arithmetic<Tp>::value) {
-        std::memcpy(current(), values, len * sizeof(Tp));
-        add(len);
+        std::copy(values, values + len, this->current());
+        this->add(len);
     } else {
         for (std::size_t i = 0; i < len; ++i) {
-            append(values[i]);
+            this->append(values[i]);
         }
     }
 }
@@ -114,7 +115,7 @@ inline Tp* clia::container::FixedBuffer<Tp, Nm>::current() noexcept {
 
 template <typename Tp, int Nm>
 inline void clia::container::FixedBuffer<Tp, Nm>::add(const std::size_t len) noexcept { 
-    assert(avail() > len);
+    assert(this->avail() > len);
     cur_ += len; 
 }
 

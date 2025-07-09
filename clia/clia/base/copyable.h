@@ -6,6 +6,8 @@ namespace clia {
     protected:
         inline Copyable() = default;
         inline ~Copyable() = default;
+        inline Copyable(const Copyable&) = default;
+        inline Copyable& operator=(const Copyable&) = default;
     };
 }
 

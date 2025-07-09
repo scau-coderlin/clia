@@ -49,7 +49,8 @@ namespace clia {
             int events_;
             int revents_; // it's the received event types of epoll or poll
             int index_;
-
+            bool event_handling_;
+            bool added_to_loop_;
             bool tied_;
             std::weak_ptr<void> tie_;
             ReadEventCallback read_callback_;

@@ -54,7 +54,6 @@ inline clia::container::FixedOStream<Nm>::FixedOStream() noexcept = default;
 template <int Nm>
 inline clia::container::FixedOStream<Nm>::~FixedOStream() noexcept = default;
 
-
 template <int Nm>
 inline const char* clia::container::FixedOStream<Nm>::data() const noexcept {
     return buffer_.data();

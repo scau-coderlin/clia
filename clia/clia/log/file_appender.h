@@ -5,7 +5,6 @@
 #include <ctime>
 #include <fstream>
 #include <string>
-#include <mutex>
 
 #include "clia/log/trait.h"
 

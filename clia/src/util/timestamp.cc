@@ -22,7 +22,7 @@ clia::util::Timestamp::Timestamp(const Timestamp &oth) noexcept
 }
 clia::util::Timestamp& clia::util::Timestamp::operator=(const Timestamp &oth) noexcept {
     if (this != &oth) {
-        this->micro_sec_since_epoch_ = oth.micro_sec_since_epoch();
+        micro_sec_since_epoch_ = oth.micro_sec_since_epoch();
     }
     return *this;
 }

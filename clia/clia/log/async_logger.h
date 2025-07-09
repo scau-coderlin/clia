@@ -23,7 +23,8 @@ namespace clia {
         private:
             inline void sync_thread();
         private:
-            using Buffer = clia::container::FixedBuffer<char, 4 * 1024 * 1024>;
+            static constexpr int kBufferSize = 4 * 1024 * 1024;
+            using Buffer = clia::container::FixedBuffer<char, kBufferSize>;
             using BufferVector = std::vector<std::unique_ptr<Buffer>>;
             using BufferPtr = BufferVector::value_type;
         private:

@@ -30,6 +30,7 @@ namespace clia {
         public:
             void remove_channel(Channel *channel);
             void update_channel(Channel *channel);
+            bool has_channel(Channel *channel) const;
         private:
             // 给eventfd返回的文件描述符wakeup绑定的事件回调，唤醒epoll_wait
             void handle_read();

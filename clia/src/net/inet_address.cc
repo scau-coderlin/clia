@@ -9,7 +9,7 @@
 
 clia::net::InetAddress::InetAddress(const char *ip, std::uint16_t port, const bool is_ipv6) noexcept {
     std::memset(&addr_, 0, sizeof(addr_));
-    if (is_ipv6) {
+    if (is_ipv6 || std::strchr(ip, ':')) {
         addr_.ipv6.sin6_family = AF_INET6;
         addr_.ipv6.sin6_port = htobe16(port);
         if (::inet_pton(AF_INET6, ip, &addr_.ipv6.sin6_addr) <= 0) {
@@ -43,7 +43,7 @@ clia::net::InetAddress::InetAddress(const InetAddress &oth) noexcept
 
 clia::net::InetAddress& clia::net::InetAddress::operator=(const InetAddress &oth) noexcept {
     if (this != &oth) {
-        this->addr_ = oth.addr_;
+        addr_ = oth.addr_;
     }
     return *this;
 }
@@ -53,16 +53,19 @@ clia::net::InetAddress& clia::net::InetAddress::operator=(const InetAddress &oth
 }
 
 int clia::net::InetAddress::get_ipaddr(char *buf, const std::size_t sz) const noexcept {
-    if (AF_INET == addr_.addr.sa_family) {
+    const char *p = nullptr;
+    switch (this->family()) {
+    case AF_INET:
         assert(sz > INET_ADDRSTRLEN);
-        ::inet_ntop(AF_INET, &addr_.ipv4.sin_addr, buf, static_cast<::socklen_t>(sz));
-    } else if (AF_INET6 == addr_.addr.sa_family) {
+        p = ::inet_ntop(AF_INET, &addr_.ipv4.sin_addr, buf, static_cast<::socklen_t>(sz));
+        break;
+    case AF_INET6:
         assert(sz > INET6_ADDRSTRLEN);
-        ::inet_ntop(AF_INET6, &addr_.ipv6.sin6_addr, buf, static_cast<::socklen_t>(sz));
-    } else {
+        p = ::inet_ntop(AF_INET6, &addr_.ipv6.sin6_addr, buf, static_cast<::socklen_t>(sz));
+    default:
         return -1;
     }
-    return 0;
+    return (p != nullptr ? 0 : -1);
 }
 
 const ::sockaddr* clia::net::InetAddress::get_sockaddr() const noexcept {

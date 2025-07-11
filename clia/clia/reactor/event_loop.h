@@ -1,5 +1,5 @@
-#ifndef CLIA_NET_EVENT_LOOP_H_
-#define CLIA_NET_EVENT_LOOP_H_
+#ifndef CLIA_REACTOR_EVENT_LOOP_H_
+#define CLIA_REACTOR_EVENT_LOOP_H_
 
 #include <atomic>
 #include <mutex>
@@ -11,7 +11,7 @@
 
 namespace clia {
     namespace reactor {
-        class EventLoop : Noncopyable {
+        class EventLoop final : Noncopyable {
         public:
             EventLoop();
             ~EventLoop();
@@ -39,9 +39,11 @@ namespace clia {
         private:
             std::atomic_bool looping_;
             std::atomic_bool quit_;
+            std::atomic_bool event_handing_; 
             std::atomic_bool calling_pending_functors_; // 标识当前loop是否有需要执行的回调操作
             const int tid_;
             const int wakeup_fd_;
+            Channel *current_active_channel_;
             clia::util::Timestamp poll_return_time_;
             std::unique_ptr<clia::reactor::Epoller> poller_;
             std::unique_ptr<Channel> wakeup_channel_;

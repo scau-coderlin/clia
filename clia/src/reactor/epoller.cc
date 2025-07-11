@@ -51,55 +51,6 @@ clia::util::Timestamp clia::reactor::Epoller::poll(int timeout_ms, ChannelList *
     return now;
 }
 
-void clia::reactor::Epoller::update_channel(Channel *channel) {
-    assert(owner_loop_->is_in_loop_thread());
-
-    const int fd = channel->fd();
-    const int index = channel->index();
-    CLIA_LOG_TRACE << "fd = " << fd
-        << " events = " << channel->events() << " index = " << index;
-    if (kNew == index || kDeleted == index) {
-        if (kNew == index) {
-            assert(channels_.find(fd) == channels_.end());
-            channels_[fd] = channel;
-        } else {
-            assert(channels_.find(fd) != channels_.end() && channels_[fd] == channel);
-        }
-        channel->set_index(kAdded);
-        this->update(EPOLL_CTL_ADD, channel);
-    } else {
-        assert(channels_.find(fd) != channels_.end() && channels_[fd] == channel && kAdded == index);
-        if (channel->is_none_event()) {
-            this->update(EPOLL_CTL_DEL, channel);
-            channel->set_index(kDeleted);
-        } else {
-            this->update(EPOLL_CTL_MOD, channel);
-        }
-    }
-}
-
-void clia::reactor::Epoller::remove_channel(Channel *channel) {
-    assert(owner_loop_->is_in_loop_thread());
-
-    const int fd = channel->fd();
-    CLIA_LOG_TRACE << "fd = " << fd;
-    assert(channels_.find(fd) != channels_.end() && channels_[fd] == channel && channel->is_none_event());
-    const int index = channel->index();
-    assert(index == kAdded || index == kDeleted);
-    const auto n = channels_.erase(fd);
-    assert(n == 1);
-    if (kAdded == index) {
-        update(EPOLL_CTL_DEL, channel);
-    }
-    channel->set_index(kNew);
-}
-
-bool clia::reactor::Epoller::has_channel(Channel *channel) const {
-    assert(owner_loop_->is_in_loop_thread());
-    const auto it = channels_.find(channel->fd());
-    return it != channels_.end() && it->second == channel;
-}
-
 void clia::reactor::Epoller::fill_active_channels(int num_events, ChannelList *active_channels) const {
     assert(static_cast<std::size_t>(num_events) <= events_.size());
     active_channels->reserve(active_channels->size() + num_events);
@@ -113,6 +64,55 @@ void clia::reactor::Epoller::fill_active_channels(int num_events, ChannelList *a
         active_channels->push_back(channel);
     }
 }
+
+void clia::reactor::Epoller::update_channel(Channel *channel) {
+    assert(owner_loop_->is_in_loop_thread());
+
+    const int fd = channel->fd();
+    const int index = channel->index();
+    CLIA_LOG_TRACE << "fd = " << fd
+        << " events = " << channel->events() << " index = " << index;
+    // 上面断言了必须在loop所在的线程，所以这里无需加锁
+    if (kNew == index || kDeleted == index) {
+        if (kNew == index) {
+            // 注册
+            assert(channels_.find(fd) == channels_.end());
+            channels_[fd] = channel;
+        } else {
+            assert(channels_.find(fd) != channels_.end() && channels_[fd] == channel);
+        }
+        channel->set_index(kAdded);
+        this->update(EPOLL_CTL_ADD, channel);
+    } else {
+        assert(channels_.find(fd) != channels_.end() && channels_[fd] == channel && kAdded == index);
+        if (channel->is_none_event()) {
+            // 如果channel暂时对任何事件都不感兴趣
+            // 但不从channels_里移除
+            this->update(EPOLL_CTL_DEL, channel);
+            channel->set_index(kDeleted);
+        } else {
+            this->update(EPOLL_CTL_MOD, channel);
+        }
+    }
+}
+
+void clia::reactor::Epoller::remove_channel(Channel *channel) {
+    assert(owner_loop_->is_in_loop_thread());
+
+    const int fd = channel->fd();
+    CLIA_LOG_TRACE << "fd = " << fd;
+    // 保证channel已注册，且对时间不感兴趣
+    assert(channels_.find(fd) != channels_.end() && channels_[fd] == channel && channel->is_none_event());
+    const int index = channel->index();
+    assert(index == kAdded || index == kDeleted);
+    const auto n = channels_.erase(fd);
+    assert(n == 1);
+    if (kAdded == index) {
+        this->update(EPOLL_CTL_DEL, channel);
+    }
+    channel->set_index(kNew);
+}
+
 void clia::reactor::Epoller::update(int operation, Channel *channel) {
     ::epoll_event event;
     std::memset(&event, 0, sizeof(event));
@@ -130,4 +130,10 @@ void clia::reactor::Epoller::update(int operation, Channel *channel) {
             CLIA_LOG_FATAL << "epoll_ctl op =" << operation << " fd =" << fd;
         }
     }
+}
+
+bool clia::reactor::Epoller::has_channel(Channel *channel) const {
+    assert(owner_loop_->is_in_loop_thread());
+    const auto it = channels_.find(channel->fd());
+    return it != channels_.end() && it->second == channel;
 }

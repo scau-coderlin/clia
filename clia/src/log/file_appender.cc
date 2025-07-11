@@ -1,13 +1,9 @@
 #include <cstddef>
 #include <cstdio>
-#include <mutex>
 #include <cassert>
 #include <ctime>
 #include <cstring>
-#include <iostream>
 
-#include <string>
-#include <vector>
 
 #include <unistd.h> // access
 #include <sys/stat.h> // stat
@@ -45,16 +41,20 @@ clia::log::FileAppender::FileAppender(
     , this_roll_period_(0)
     , lck_(thread_safe ? new std::mutex : nullptr) 
     , written_bytes_(0)
+    , file_(nullptr)
 {
     if (::access(path_.c_str(), F_OK) != 0) {
         ::mkdir(path_.c_str(), 0755);
     }
+    buffer_.resize(kBufferSize);
     this->roll_file();
 }
 
 clia::log::FileAppender::~FileAppender() {
-    if (file_.is_open()) {
-        file_.close();
+    if (file_ != nullptr && file_ != stdout && file_ != stderr) {
+        std::fflush(file_);
+        ::fsync(::fileno(file_));
+        std::fclose(file_);
     }
 }
 
@@ -71,36 +71,33 @@ void clia::log::FileAppender::append(const void *buf, const std::size_t size) no
 }
 
 void clia::log::FileAppender::flush() noexcept {
-    file_.flush();
+    std::fflush(file_);
 }
 
 void clia::log::FileAppender::roll_file() noexcept {
     const std::time_t now = std::time(nullptr);
-    if (last_roll_time_ != now) {
-        bool check_period = false;
-        if (written_bytes_ < roll_size_byte_) {
-            if (count_ < check_every_) {
-                return;
-            } 
-            count_ = 0;
-            check_period = true;
-        } 
-        const std::time_t this_period = now / roll_period_sec_ * roll_period_sec_;
-        if (check_period && this_period == this_roll_period_) {
-            return;
-        } 
-
+    if (last_roll_time_ != now) { 
         const auto filename = this->get_logfilename();
         last_roll_time_ = now;
-        this_roll_period_ = this_period;
-        if (file_) {
-            file_.close();
+        this_roll_period_ = now / roll_period_sec_ * roll_period_sec_;
+        if (file_ != nullptr && file_ != stdout && file_ != stderr) {
+            std::fflush(file_);
+            ::fsync(::fileno(file_));
+            std::fclose(file_);
         }
-        file_ .open(filename, std::ios::app);
-        if (!file_.is_open()) {
+        file_ = std::fopen(filename.c_str(), "a");
+        if (file_ != nullptr) {
+            if (std::setvbuf(file_, buffer_.data(), _IOFBF, buffer_.size()) != 0) {
+                std::fprintf(stderr, "setvbuf buf err, errno = [%d][%s]\n", errno, clia::util::process::strerror(errno));
+            }
+        } else {
             std::fprintf(stderr, "fopen log [%s] err, errno = [%d][%s]\n", filename.c_str(), errno, clia::util::process::strerror(errno));
-            std::abort();
-        }
+#ifdef NDEBUG
+            file_ = stdout;
+#else
+            file_ = stderr;
+#endif
+        } 
         written_bytes_ = 0;
         this->del_old_files();
     }
@@ -135,10 +132,33 @@ std::string clia::log::FileAppender::get_logfilename() noexcept {
 }
 
 void clia::log::FileAppender::append_unlocked(const void *buf, const std::size_t size) noexcept {
-    ++count_;
-    this->roll_file();
-    file_.write(static_cast<const char*>(buf), size);
-    written_bytes_ += size;
+    if (written_bytes_ > roll_size_byte_) {
+        this->roll_file();
+    } else {
+        ++count_;
+        if (count_ >= check_every_) {
+            count_ = 0;
+            const std::time_t this_period = std::time(nullptr) / roll_period_sec_ * roll_period_sec_;
+            if (this_period != this_roll_period_) {
+                roll_file();
+            }
+        }
+    }
+
+    std::size_t written = 0;
+    while (written != size) {
+        const std::size_t remain = size - written;
+        const auto n = ::fwrite_unlocked(static_cast<const unsigned char*>(buf) + written, 1, remain, file_);
+        if (n != remain) {
+            const auto err = std::ferror(file_);
+            if (err) {
+                fprintf(stderr, "clia::log::FileAppender::append_unlocked failed %s\n", clia::util::process::strerror(err));
+                break;
+            }
+        }        
+        written += n;
+    }
+    written_bytes_ += written;
 }
 
 void clia::log::FileAppender::del_old_files() noexcept {

@@ -3,14 +3,16 @@
 
 #include <cstddef>
 #include <ctime>
-#include <fstream>
 #include <string>
+#include <cstdio>
+#include <vector>
+#include <mutex>
 
 #include "clia/log/trait.h"
 
 namespace clia {
     namespace log {
-        class FileAppender : public trait::Appender {
+        class FileAppender final : public trait::Appender {
         public:
             FileAppender(
                 const char *path, 
@@ -31,6 +33,8 @@ namespace clia {
             void append_unlocked(const void *buf, const std::size_t size) noexcept;
             void del_old_files() noexcept; 
         private:
+            static constexpr int kBufferSize = 4 * 1024 * 1024; 
+        private:
             const std::string path_;
             const std::string logname_;
             const std::size_t roll_size_byte_;
@@ -42,7 +46,8 @@ namespace clia {
             std::time_t this_roll_period_;
             std::unique_ptr<std::mutex> lck_;
             std::size_t written_bytes_;
-            std::ofstream file_;            
+            std::FILE *file_; 
+            std::vector<char> buffer_;           
         };
     }
 }

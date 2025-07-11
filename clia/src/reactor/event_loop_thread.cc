@@ -11,7 +11,7 @@ clia::reactor::EventLoopThread::EventLoopThread(const ThreadInitCallBack &cb)
 
 clia::reactor::EventLoopThread::~EventLoopThread() {
     exiting_ = true;
-    if (loop_) {
+    if (loop_ != nullptr) {
         loop_->quit();
     }
     if (thread_.joinable()) {

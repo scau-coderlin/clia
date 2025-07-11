@@ -19,7 +19,7 @@ namespace clia {
             std::vector<EventLoop*> get_all_loops();
             bool started() const noexcept;
         private:
-            EventLoop *base_loop_;
+            EventLoop *const base_loop_;
             bool started_;
             int num_threads_;
             int next_;

@@ -9,7 +9,7 @@
 
 namespace clia {
     namespace reactor {
-        class Epoller : Noncopyable {
+        class Epoller final : Noncopyable {
         public:
             Epoller(EventLoop *loop);
             ~Epoller() noexcept;

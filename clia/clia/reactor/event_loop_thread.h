@@ -10,7 +10,7 @@
 
 namespace clia {
     namespace reactor {
-        class EventLoopThread : Noncopyable {
+        class EventLoopThread final : Noncopyable {
         public:
             using ThreadInitCallBack = std::function<void(EventLoop*)>;
         public:

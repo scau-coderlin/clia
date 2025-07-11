@@ -21,12 +21,13 @@ void clia::reactor::EventLoopThreadPool::set_thread_num(int num) noexcept {
     num_threads_ = num;
 }
 
+bool clia::reactor::EventLoopThreadPool::started() const noexcept {
+    return started_;
+}
+
 void clia::reactor::EventLoopThreadPool::start(const ThreadInitCallBack &cb) {
     assert(!started_);
-    if (!base_loop_->is_in_loop_thread()) {
-        CLIA_LOG_FATAL << "EventLoopThreadLoop start not in baseloop thread";
-        std::abort();
-    }
+    assert(base_loop_->is_in_loop_thread());
 
     started_ = true;
     for (int i = 0; i < num_threads_; ++i) {
@@ -40,11 +41,7 @@ void clia::reactor::EventLoopThreadPool::start(const ThreadInitCallBack &cb) {
 }
 
 clia::reactor::EventLoop* clia::reactor::EventLoopThreadPool::get_next_loop() {
-    if (!base_loop_->is_in_loop_thread()) {
-        CLIA_LOG_FATAL << "EventLoopThreadLoop get_next_loop not in baseloop thread";
-        std::abort();
-    }
-    assert(started_);
+    assert(base_loop_->is_in_loop_thread() && started_);
 
     EventLoop *loop = base_loop_;
     if (!loops_.empty()) {
@@ -58,18 +55,11 @@ clia::reactor::EventLoop* clia::reactor::EventLoopThreadPool::get_next_loop() {
 }
 
 std::vector<clia::reactor::EventLoop*> clia::reactor::EventLoopThreadPool::get_all_loops() {
-    if (!base_loop_->is_in_loop_thread()) {
-        CLIA_LOG_FATAL << "EventLoopThreadLoop get_all_loops not in baseloop thread";
-        std::abort();
-    }
-    assert(started_);
+    assert(base_loop_->is_in_loop_thread() && started_);
+
     if (loops_.empty()) {
         return std::vector<clia::reactor::EventLoop*>(1, base_loop_);
     } else {
         return loops_;
     }
-}
-
-bool clia::reactor::EventLoopThreadPool::started() const noexcept {
-    return started_;
 }

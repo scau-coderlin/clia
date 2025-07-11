@@ -8,7 +8,7 @@
 
 namespace clia {
     namespace net {
-        class InetAddress : clia::Copyable {
+        class InetAddress final : clia::Copyable {
         public:
             InetAddress(const char *ip, std::uint16_t port, const bool is_ipv6 = false) noexcept;
             explicit InetAddress(const ::sockaddr_in &addr) noexcept;

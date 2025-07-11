@@ -8,7 +8,7 @@
 
 namespace clia {
     namespace reactor {
-        class Channel : Noncopyable{
+        class Channel final : Noncopyable{
         public:
             Channel(EventLoop *loop, const int fd) noexcept;
             ~Channel();

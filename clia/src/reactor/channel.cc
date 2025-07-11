@@ -29,7 +29,7 @@ clia::reactor::Channel::~Channel() {
     assert(!event_handling_);
     assert(!added_to_loop_);
     if (loop_->is_in_loop_thread()) {
-        assert(loop_->has_channel(this));
+        assert(!loop_->has_channel(this));
     }
 }
 

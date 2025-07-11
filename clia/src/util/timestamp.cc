@@ -1,4 +1,5 @@
 #include <cstdint>
+#include <ctime>
 #include <sys/time.h>
 
 #include "clia/util/timestamp.h"
@@ -44,7 +45,7 @@ std::string clia::util::Timestamp::to_format_str(const bool show_micro_sec) cons
 int clia::util::Timestamp::to_format_str(char *outbuf, std::size_t sz, const bool show_micro_sec) const noexcept {
     const auto sec = sec_since_epoch();
     ::tm tm_time;
-    ::gmtime_r(&sec, &tm_time);
+    ::localtime_r(&sec, &tm_time);
     if (show_micro_sec) {
         const int microsec = static_cast<int>(micro_sec_since_epoch() % kMicroSecPerSec);
         return std::snprintf(outbuf, sz, "%04d-%02d-%02d %02d:%02d:%02d.%06d", 

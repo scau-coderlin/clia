@@ -10,6 +10,7 @@ namespace clia {
     namespace net {
         class InetAddress final : clia::Copyable {
         public:
+            InetAddress() noexcept;
             InetAddress(const char *ip, std::uint16_t port, const bool is_ipv6 = false) noexcept;
             explicit InetAddress(const ::sockaddr_in &addr) noexcept;
             explicit InetAddress(const ::sockaddr_in6 &addr) noexcept;
@@ -22,10 +23,9 @@ namespace clia {
             const ::sockaddr* get_sockaddr() const noexcept;
         private:
             union {
-                ::sockaddr addr;
-                ::sockaddr_in ipv4;
-                ::sockaddr_in6 ipv6;
-            } addr_;
+                ::sockaddr_in addr_;
+                ::sockaddr_in6 addr6_;
+            };
         };
     }
 }

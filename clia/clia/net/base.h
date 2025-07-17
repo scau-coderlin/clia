@@ -4,6 +4,8 @@
 #include <memory>
 #include <functional>
 
+#include "clia/util/timestamp.h"
+
 namespace clia {
     namespace net {
         class Buffer;
@@ -13,6 +15,7 @@ namespace clia {
         using ConnectionCallback = std::function<void (const TcpConnectionPtr&)>;
         using CloseCallback = std::function<void (const TcpConnectionPtr&)>;
         using WriteCompleteCallback = std::function<void (const TcpConnectionPtr&)>; 
+        using MessageCallback = std::function<void(const TcpConnectionPtr&, Buffer*, clia::util::Timestamp)>;
     }
 }
 

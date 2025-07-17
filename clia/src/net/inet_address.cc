@@ -1,6 +1,7 @@
 #include <cassert>
 #include <cstring>
 
+#include <endian.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
@@ -68,4 +69,24 @@ int clia::net::InetAddress::get_ipaddr(char *buf, const std::size_t sz) const no
 
 const ::sockaddr* clia::net::InetAddress::get_sockaddr() const noexcept {
     return reinterpret_cast<const ::sockaddr*>(&addr6_);
+}
+
+std::string clia::net::InetAddress::get_addr() const noexcept {
+    char buf[64] = {0};
+    std::string address;
+    address.reserve(64);
+    if (this->family() == AF_INET6) {
+        ::inet_ntop(AF_INET6, &addr6_.sin6_addr, buf, static_cast<::socklen_t>(sizeof(buf)));
+        address += '[';
+        address += buf;
+        address += ']';
+        address += ':';
+        address += std::to_string(be16toh(addr6_.sin6_port));
+    } else {
+        ::inet_ntop(AF_INET, &addr_.sin_addr, buf, static_cast<::socklen_t>(sizeof(buf)));
+        address += buf;
+        address += ':';
+        address = std::string(buf) + ':' + std::to_string(be16toh(addr_.sin_port));
+    }
+    return address;
 }

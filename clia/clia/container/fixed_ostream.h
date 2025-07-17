@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdarg>
 #include <cstdio>
+#include <string>
 
 #include <sys/stat.h>
 
@@ -41,6 +42,7 @@ namespace clia {
             inline Self& operator<<(const unsigned long val) noexcept;
             inline Self& operator<<(const unsigned long long val) noexcept;
             inline Self& operator<<(const long long val) noexcept;
+            inline Self& operator<<(const std::string &str) noexcept;
         private:
             clia::container::FixedBuffer<char, Nm> buffer_;
         };
@@ -177,6 +179,12 @@ template <int Nm>
 inline clia::container::FixedOStream<Nm>& clia::container::FixedOStream<Nm>::operator<<(const long long val) noexcept {
     const auto n = clia::util::str_func::convert(buffer_.current(), buffer_.avail(), val);
     buffer_.add(n);
+    return *this;
+}
+
+template <int Nm>
+inline clia::container::FixedOStream<Nm>& clia::container::FixedOStream<Nm>::operator<<(const std::string &str) noexcept {
+    buffer_.append(str.c_str(), str.size());
     return *this;
 }
 

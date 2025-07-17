@@ -97,7 +97,7 @@ inline void clia::container::FixedBuffer<Tp, Nm>::append(Tp&& value) noexcept {
 
 template <typename Tp, int Nm>
 inline void clia::container::FixedBuffer<Tp, Nm>::append(const Tp* values, const std::size_t len) noexcept {
-    assert(len < avail());
+    assert(len < this->avail());
     if (std::is_arithmetic<Tp>::value) {
         std::copy(values, values + len, this->current());
         this->add(len);

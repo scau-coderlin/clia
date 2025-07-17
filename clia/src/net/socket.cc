@@ -16,11 +16,14 @@
 clia::net::Socket::Socket(const int sockfd) noexcept
     : sockfd_(sockfd) 
 {
+    CLIA_LOG_DEBUG << "Socket::Socket:: sockfd_ = " << sockfd_;
     assert(sockfd_ != -1);
 }
 
 clia::net::Socket::~Socket() noexcept {
+    CLIA_LOG_DEBUG << "Socket::~Socket sockfd_ = " << sockfd_;
     ::close(sockfd_);    
+    CLIA_LOG_DEBUG << "Socket::~Socket sockfd_ = " << sockfd_;
 }
 
 int clia::net::Socket::fd() const noexcept {
@@ -89,6 +92,7 @@ int clia::net::Socket::accept(InetAddress *peer_addr) noexcept {
 }
 
 void clia::net::Socket::shutdown_write() noexcept {
+    CLIA_LOG_DEBUG << "Socket::shutdown_write  sockfd_ = " << sockfd_;
     if (::shutdown(sockfd_, SHUT_WR) < 0) {
         CLIA_FMT_LOG_ERROR("shutdown fail, errno = [%d][%s]", errno, clia::util::process::strerror(errno));
     }

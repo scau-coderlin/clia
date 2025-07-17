@@ -13,7 +13,7 @@ clia::net::Buffer::Buffer(const std::size_t inital_size)
     , writer_index_(kCheapPrepend) 
 {
     assert(readable_bytes() == 0);
-    assert(writable_bytes() == 0);
+    assert(writable_bytes() == inital_size);
     assert(prependable_bytes() == kCheapPrepend);
 }
 
@@ -89,7 +89,7 @@ void clia::net::Buffer::retrieve_all() noexcept {
 }
 
 std::string clia::net::Buffer::retrieve_all_as_string() {
-    return retrieve_as_string(readable_bytes());
+    return this->retrieve_as_string(this->readable_bytes());
 }
 
 std::string clia::net::Buffer::retrieve_as_string(const std::size_t len) {
@@ -109,7 +109,7 @@ void clia::net::Buffer::ensure_writable_bytes(const std::size_t len) {
 void clia::net::Buffer::append(const void *data, const std::size_t len) {
     this->ensure_writable_bytes(len);
     const unsigned char *p = static_cast<const unsigned char*>(data);
-    std::copy(p, p + len, begin_write());
+    std::copy(p, p + len, this->begin_write());
     writer_index_ += len;
 }
 
@@ -121,30 +121,34 @@ const unsigned char* clia::net::Buffer::begin_write() const noexcept {
     return this->begin() + writer_index_;
 }
 
-::ssize_t  clia::net::Buffer::read_fd(int fd) noexcept {
+::ssize_t clia::net::Buffer::read_fd(const int fd) noexcept {
     unsigned char extrabuf[65536];
-    ::iovec vec[2];
     const auto writable = this->writable_bytes();
+    const int kIovCnt = 2;
+    ::iovec vec[kIovCnt];
     vec[0].iov_base = this->begin() + writer_index_;
     vec[0].iov_len = writable;
+    assert(vec[0].iov_base != nullptr && vec[0].iov_len > 0);
     vec[1].iov_base = extrabuf;
-    vec[0].iov_len = sizeof(extrabuf);
+    vec[1].iov_len = sizeof(extrabuf);
+    assert(vec[1].iov_base != nullptr && vec[1].iov_len > 0);
 
-    const int iovcnt = 2;
-    const auto n = ::readv(fd, vec, iovcnt);
+    const auto n = ::readv(fd, vec, kIovCnt);
     if (n < 0) {
-        CLIA_FMT_LOG_ERROR("readv fail, errno = [%d][%s]", errno, clia::util::process::strerror(errno));
+        CLIA_FMT_LOG_ERROR("fd = [%d], readv fail, errno = [%d][%s]", fd, errno, clia::util::process::strerror(errno));
     } else if (n <= writable) {
         writer_index_ += n;
     } else {
-        writer_index_ = buffer_.size();
+        writer_index_ += writable;
         this->append(extrabuf, n - writable);
     }
+    std::memcpy(extrabuf, this->peek(), this->readable_bytes());
+    *(extrabuf + this->readable_bytes()) = '\0';
     return n;
 }
 
 ::ssize_t clia::net::Buffer::write_fd(int fd) noexcept {
-    auto n = ::write(fd, this->peek(), readable_bytes());
+    const auto n = ::write(fd, this->peek(), this->readable_bytes());
     if (n < 0) {
         CLIA_FMT_LOG_ERROR("write fail, errno = [%d][%s]", errno, clia::util::process::strerror(errno));
     } else {

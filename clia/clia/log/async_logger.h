@@ -16,7 +16,7 @@ namespace clia {
     namespace log {
         class AsyncLogger final : public trait::Logger {
         public:
-            explicit AsyncLogger(const Level level, std::shared_ptr<trait::Appender> appender, const int flush_interval_sec = 3) noexcept;
+            explicit AsyncLogger(const Level level, std::shared_ptr<trait::Appender> appender, const int flush_interval_sec = 1) noexcept;
             ~AsyncLogger() noexcept;
         public:
             void log(const Level level, const void *message, const std::size_t len) noexcept override; // 异步日志记录方法

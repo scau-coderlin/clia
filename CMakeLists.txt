@@ -14,5 +14,8 @@ include_directories(clia)
 
 add_subdirectory(clia)
 
-add_executable(logtest test/logtest.cpp)
+add_executable(logtest test/logtest.cc)
 target_link_libraries(logtest clia)
+
+add_executable(test_server test/test_server.cc)
+target_link_libraries(test_server clia)

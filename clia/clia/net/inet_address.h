@@ -20,6 +20,7 @@ namespace clia {
         public:
             ::sa_family_t family() const noexcept;
             int get_ipaddr(char *buf, const std::size_t sz) const noexcept;
+            std::string get_addr() const noexcept;
             const ::sockaddr* get_sockaddr() const noexcept;
         private:
             union {
